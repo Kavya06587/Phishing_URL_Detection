@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 320px;
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    .header {
+      padding: 16px 20px;
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+    }
+
+    .header h1 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #94a3b8;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .result {
+      padding: 24px 20px;
+      text-align: center;
+    }
+
+    .status-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .status-text {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .status-text.phishing { color: #ef4444; }
+    .status-text.safe     { color: #22c55e; }
+    .status-text.loading  { color: #94a3b8; }
+
+    .confidence {
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 20px;
+    }
+
+    .url-box {
+      background: #1e293b;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 11px;
+      color: #64748b;
+      word-break: break-all;
+      text-align: left;
+      margin-bottom: 16px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .metric-card {
+      background: #1e293b;
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .metric-val {
+      font-size: 16px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .metric-label {
+      font-size: 10px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .models {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .model-tag {
+      flex: 1;
+      padding: 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .model-tag.phishing {
+      background: rgba(239,68,68,0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239,68,68,0.3);
+    }
+
+    .model-tag.safe {
+      background: rgba(34,197,94,0.15);
+      color: #22c55e;
+      border: 1px solid rgba(34,197,94,0.3);
+    }
+
+    .footer {
+      padding: 10px 20px;
+      background: #1e293b;
+      border-top: 1px solid #334155;
+      font-size: 10px;
+      color: #475569;
+      text-align: center;
+    }
+
+    .warning-banner {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 11px;
+      color: #fca5a5;
+      margin-bottom: 16px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Phishing Detector</h1>
+</div>
+
+<div class="result" id="result">
+  <div class="status-icon">🔍</div>
+  <div class="status-text loading">Analysing...</div>
+  <div class="confidence">Checking this page</div>
+</div>
+
+<script src="popup.js"></script>
+
+<div class="footer">
+    AUC: 0.9935 &nbsp;|&nbsp; Recall: 93.79% &nbsp;|&nbsp; FPR: 1.92%
+</div>
+
+</body>
+</html>
