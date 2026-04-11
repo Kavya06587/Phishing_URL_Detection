@@ -14,8 +14,9 @@ CORS(app)
 # ── Load models ──
 BASE = os.path.join(os.path.dirname(__file__), '..', 'models')
 
-rf  = joblib.load(os.path.join(BASE, 'rf_model.pkl'))
-iso = joblib.load(os.path.join(BASE, 'iso_model.pkl'))
+rf     = joblib.load(os.path.join(BASE, 'rf_model.pkl'))
+iso    = joblib.load(os.path.join(BASE, 'iso_model.pkl'))
+scaler = joblib.load(os.path.join(BASE, 'scaler.pkl')) 
 
 with open(os.path.join(BASE, 'feature_names.json')) as f:
     feature_names = json.load(f)
@@ -23,8 +24,7 @@ with open(os.path.join(BASE, 'feature_names.json')) as f:
 with open(os.path.join(BASE, 'metadata.json')) as f:
     metadata = json.load(f)
 
-# 🔥 Updated threshold
-THRESHOLD = 0.75
+THRESHOLD = metadata.get('optimal_threshold', 0.65)
 
 print(f"Models loaded. Threshold: {THRESHOLD}")
 print(f"Features expected: {len(feature_names)}")
@@ -53,9 +53,9 @@ def get_domain_age(url):
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({
-        'status': 'running',
+        'status':    'running',
         'threshold': THRESHOLD,
-        'features': len(feature_names)
+        'features':  len(feature_names)
     })
 
 
@@ -73,8 +73,8 @@ def predict():
 
         # ── Build feature vector ──
         features = data['features']
-        vector = []
-        missing = []
+        vector   = []
+        missing  = []
 
         for name in feature_names:
             if name in features:
@@ -83,29 +83,18 @@ def predict():
                 vector.append(0.0)
                 missing.append(name)
 
-        X = np.array(vector).reshape(1, -1)
+        X_raw = np.array(vector).reshape(1, -1)
 
-        # ── RF Prediction ──
-        rf_prob = rf.predict_proba(X)[0][1]
-
-        # ── DOMAIN AGE ADJUSTMENT (🔥 KEY FIX) ──
-        domain_age = get_domain_age(data['url'])
-
-        if domain_age < 30:
-            rf_prob += 0.15   # new domain → risky
-        elif domain_age > 365:
-            rf_prob -= 0.1    # old domain → safer
-
-        rf_prob = min(max(rf_prob, 0), 1)  # clamp between 0–1
-
+        rf_prob  = rf.predict_proba(X_raw)[0][1]
         rf_label = int(rf_prob >= THRESHOLD)
 
-        # ── Isolation Forest (ONLY FOR SIGNAL) ──
-        iso_raw = iso.predict(X)[0]
-        iso_label = int(iso_raw == -1)
+        iso_raw   = iso.predict(X_raw)[0]
+        iso_label = int(iso_raw == -1)   # -1 = anomaly → phishing
 
-        # ── FINAL DECISION (ONLY RF) ──
-        final = rf_label
+        final = int((rf_prob >= THRESHOLD) or (iso_label == 1 and rf_prob >= 0.45))
+
+        # Get domain age for display / reasons (not used in prediction)
+        domain_age = get_domain_age(data['url'])
 
         # ── CONFIDENCE / RISK LEVEL ──
         if rf_prob >= 0.85:
@@ -117,6 +106,8 @@ def predict():
             risk_level = 'MEDIUM'
 
         elif iso_label == 1:
+            # ISO flagged it as anomalous even though RF probability is
+            # below the main threshold — treat as suspicious
             confidence = 'SUSPICIOUS ⚠ (unusual pattern)'
             risk_level = 'SUSPICIOUS'
 
@@ -143,18 +134,24 @@ def predict():
         if domain_age > 365:
             reasons.append("Old trusted domain")
 
+        if len(missing) > 10:
+            reasons.append(
+                f"Warning: {len(missing)} features missing — prediction may be unreliable"
+            )
+
         return jsonify({
-            'url': data['url'],
-            'rf_probability': round(float(rf_prob), 4),
-            'rf_prediction': 'phishing' if rf_label else 'legitimate',
-            'iso_prediction': 'phishing' if iso_label else 'legitimate',
-            'final': 'phishing' if final else 'legitimate',
-            'confidence': confidence,
-            'risk_level': risk_level,
-            'domain_age_days': domain_age,
-            'threshold': THRESHOLD,
+            'url':              data['url'],
+            'rf_probability':   round(float(rf_prob), 4),
+            'rf_prediction':    'phishing' if rf_label else 'legitimate',
+            'iso_prediction':   'phishing' if iso_label else 'legitimate',
+            'final':            'phishing' if final else 'legitimate',
+            'confidence':       confidence,
+            'risk_level':       risk_level,
+            'domain_age_days':  domain_age,
+            'threshold':        THRESHOLD,
             'missing_features': len(missing),
-            'reasons': reasons
+            'missing_names':    missing if missing else [],
+            'reasons':          reasons
         })
 
     except Exception as e:
@@ -166,7 +163,7 @@ def predict():
 def get_features():
     return jsonify({
         'features': feature_names,
-        'count': len(feature_names)
+        'count':    len(feature_names)
     })
 
 
